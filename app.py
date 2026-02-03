@@ -26,7 +26,7 @@ relationship = st.sidebar.selectbox("증여자와의 관계", options=rel_df['re
 if st.sidebar.button("계산하기"):
     with st.spinner('데이터 분석 중...'):
         # 로직 레이어 호출
-        df, start_str, end_str = get_stock_and_fx_data(ticker, gift_date)
+        df, start_str, end_str, is_incomplete, reportable_date = get_stock_and_fx_data(ticker, gift_date)
         avg_val = df['KRW_Value'].mean()
         total_amt = avg_val * stock_count
         deduction, tax_base, tax = calculate_tax_logic(total_amt, relationship)
@@ -37,13 +37,24 @@ if st.sidebar.button("계산하기"):
             'ticker': ticker, 'avg_val': avg_val, 'total_amount': total_amt,
             'deduction': deduction, 'tax_base': tax_base, 'tax': tax,
             'gift_date': gift_date, 'start_date': start_str, 'end_date': end_str,
-            'stock_count': stock_count
+            'stock_count': stock_count,
+            'is_incomplete': is_incomplete,
+            'reportable_date': reportable_date
         }
 
 # --- 결과 화면 출력 (View) ---
 if st.session_state.calculated_df is not None:
     res = st.session_state.result_summary
     df = st.session_state.calculated_df
+
+    # [추가] 데이터가 불완전할 경우 경고창 띄우기
+    if res.get('is_incomplete', False):
+        st.warning(f"""
+            ⚠️ **주의: 아직 평가기간(수증일 전후 2개월)이 종료되지 않았습니다.**
+            
+            현재 결과는 오늘까지의 데이터를 바탕으로 계산된 임시 수치이며, 세법상 정확한 계산 결과가 아닙니다.
+            정확한 신고용 데이터는 **{res['reportable_date']}**부터 조회가 가능합니다.
+        """)
 
     # 요약 지표
     col1, col2 = st.columns(2)
@@ -59,7 +70,47 @@ if st.session_state.calculated_df is not None:
     
     st.line_chart(df['KRW_Value'])
 
-    # 엑셀 다운로드 (생략 - 기존 로직 유지)
-    # ... (생략된 엑셀 코드) ...
+    # 엑셀 다운로드
+    st.divider()
+    st.subheader("📋 증빙 자료 준비")
+
+    # 엑셀 파일 생성 로직 (In-memory)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # 1) 상세 데이터 시트
+        excel_df = df.copy()
+        excel_df.index.name = '일자'
+        excel_df = excel_df.reset_index()
+        
+        # 엑셀에서 보기 좋게 날짜 형식 변환
+        excel_df['일자'] = excel_df['일자'].dt.strftime('%Y-%m-%d')
+        excel_df.to_excel(writer, sheet_name='증여세_산출근거', index=False)
+        
+        # 2) 요약 리포트 시트
+        # incomplete 상태에 따른 비고란 추가
+        status_note = "확정 데이터" if not res.get('is_incomplete', False) else f"임시 데이터 (확정 가능일: {res.get('reportable_date')})"
+        
+        summary_data = {
+            '항목': ['종목명', '수량', '평균가액(1주)', '총 증여가액', '공제액', '과세표준', '예상세액', '비고'],
+            '내역': [
+                res['ticker'], 
+                f"{res['stock_count']:,}", 
+                f"{res['avg_val']:,.0f}", 
+                f"{res['total_amount']:,.0f}", 
+                f"{res['deduction']:,.0f}",
+                f"{res['tax_base']:,.0f}",
+                f"{res['tax']:,.0f}",
+                status_note
+            ]
+        }
+        pd.DataFrame(summary_data).to_excel(writer, sheet_name='요약리포트', index=False)
+
+    # 다운로드 버튼
+    st.download_button(
+        label="📄 국세청 제출용 증빙자료(Excel) 다운로드",
+        data=output.getvalue(),
+        file_name=f"증여세_증빙_{res['ticker']}_{res['gift_date']}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 else:
     st.info("왼쪽에서 정보를 입력하고 '계산하기'를 눌러주세요.")
