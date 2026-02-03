@@ -14,7 +14,8 @@ st.markdown("""
 # --- 사이드바: 입력창 ---
 st.sidebar.header("입력 정보")
 ticker = st.sidebar.text_input("종목 티커 (예: NVDA, TSLA)", value="NVDA").upper()
-gift_date = st.sidebar.date_input("수증일 (증여받은 날)", datetime(2024, 1, 15))
+stock_count = st.sidebar.number_input("주식 수량", value=10)
+gift_date = st.sidebar.date_input("수증일 (증여받은 날)", value="today")
 
 if st.sidebar.button("계산하기"):
     # 1. 날짜 계산
@@ -37,7 +38,7 @@ if st.sidebar.button("계산하기"):
         df['KRW_Value'] = df['Stock_Price'] * df['FX_Rate']
         
         # 4. 결과 출력
-        avg_val = df['KRW_Value'].mean()
+        avg_val = df['KRW_Value'].mean() * stock_count
         
         # 상단 요약 카드
         col1, col2 = st.columns(2)
