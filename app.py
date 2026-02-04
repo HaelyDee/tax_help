@@ -5,13 +5,21 @@ from datetime import datetime
 from calculator import load_relation_data, get_stock_and_fx_data, calculate_tax_logic
 from excel_exporter import generate_excel_report
 
-# 1. 페이지 설정 및 세션 초기화
+# 1. 페이지 설정 (세션 값을 동적으로 참조하도록 수정)
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = "expanded" # 초기값은 펼침
+
 st.set_page_config(
     page_title="해외주식 증여세 계산기",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state=st.session_state.sidebar_state # 세션 상태 반영
 )
+
+# ... (중간 생략: 3. 사이드바 입력 영역까지 동일)
+
+
+
 
 # 세션 상태 초기화 (자바의 생성자 역할)
 if 'all_results' not in st.session_state:
@@ -53,6 +61,9 @@ relationship = st.sidebar.selectbox("증여자와의 관계", options=rel_df['re
 
 # 4. 계산 버튼 클릭 시 로직
 if st.sidebar.button("계산하기"):
+    # 계산 시작 전 사이드바 상태를 '닫힘'으로 변경 (모바일 대응)
+    st.session_state.sidebar_state = "collapsed"
+    
     all_results = []
     total_gift_amount_sum = 0
     
@@ -90,7 +101,7 @@ if st.sidebar.button("계산하기"):
             'end_date': end_str,
             'rel_nm': relationship
         }
-        st.rerun() # 계산 후 즉시 화면 갱신
+        st.rerun() # 계산 후 즉시 화면 갱신(최상단의 set_page_config를 다시 읽어 사이드바를 닫음)
 
 # 5. 결과 화면 출력 영역
 if st.session_state.all_results:
@@ -103,6 +114,8 @@ if st.session_state.all_results:
         report_date = res_list[0].get('reportable_date')
         st.warning(f"⚠️ **주의: 아직 증여 신고를 위한 평가기간이 종료되지 않았습니다.** (확정일: {report_date})")
 
+    st.success("✅ 계산이 완료되었습니다! 아래에서 결과를 확인하세요.")
+    
     # 상단 요약 지표
     st.header("💰 전체 증여세 통합 산출 결과")
     c1, c2, c3 = st.columns(3)
