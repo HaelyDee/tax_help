@@ -67,8 +67,6 @@ if st.session_state.calculated_df is not None:
     c1.metric("총 증여가액", f"{res['total_amount']:,.0f} 원")
     c2.metric("공제 금액", f"{res['deduction']:,.0f} 원")
     c3.metric("예상 납부세액", f"{res['tax']:,.0f} 원")
-    
-    st.line_chart(df['KRW_Value'])
 
     # 엑셀 다운로드
     st.divider()
@@ -91,7 +89,10 @@ if st.session_state.calculated_df is not None:
         status_note = "확정 데이터" if not res.get('is_incomplete', False) else f"임시 데이터 (확정 가능일: {res.get('reportable_date')})"
         
         summary_data = {
-            '항목': ['종목명', '수량', '평균가액(1주)', '총 증여가액', '공제액', '과세표준', '예상세액', '비고'],
+            '항목': [
+                '종목명', '수량', '평균가액(1주)', '총 증여가액', 
+                '공제액', '과세표준', '예상세액', '데이터 출처', '산출 기준'
+            ],
             '내역': [
                 res['ticker'], 
                 f"{res['stock_count']:,}", 
@@ -100,7 +101,8 @@ if st.session_state.calculated_df is not None:
                 f"{res['deduction']:,.0f}",
                 f"{res['tax_base']:,.0f}",
                 f"{res['tax']:,.0f}",
-                status_note
+                "Yahoo Finance (yfinance API)",
+                "상증세법상 수증일 전후 2개월 종가 평균"
             ]
         }
         pd.DataFrame(summary_data).to_excel(writer, sheet_name='요약리포트', index=False)
@@ -112,5 +114,20 @@ if st.session_state.calculated_df is not None:
         file_name=f"증여세_증빙_{res['ticker']}_{res['gift_date']}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+    st.divider()
+    # 도움말/출처 섹션
+    with st.expander("ℹ️ 데이터 출처 및 산출 기준 안내"):
+        st.markdown(f"""
+        * **주가 정보**: Yahoo Finance ({res['ticker']} 종가 기준)
+        * **환율 정보**: Yahoo Finance (USDKRW=X 종가 기준)
+        * **산출 방식**: 상속세 및 증여세법 제63조 및 동법 시행령 제52조에 의거, 평가기준일(수증일) 전후 각 2개월 동안 공표된 매일의 거래소 최종 시세가액(종가)의 평균액으로 계산합니다.
+        * **환율 적용**: 매일의 종가 환율을 해당 날짜의 주가에 직접 곱하여 원화 환산 가액을 산출한 뒤, 그 전체 합계의 평균을 구합니다.
+        """)
+
+    st.divider()
+    st.subheader("🎢 주가 추이")
+    st.line_chart(df['KRW_Value'])
+
 else:
     st.info("왼쪽에서 정보를 입력하고 '계산하기'를 눌러주세요.")
