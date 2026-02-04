@@ -11,8 +11,14 @@ if 'calculated_df' not in st.session_state:
 if 'result_summary' not in st.session_state:
     st.session_state.result_summary = {}
 
-st.set_page_config(page_title="해외주식 증여세 계산기", layout="wide")
-st.title("📈 해외주식 증여세 평균시세 계산기")
+st.set_page_config(
+    page_title="해외주식 증여세 계산기",
+    page_icon="📈", # 브라우저 탭에 아이콘 추가
+    layout="wide",
+    initial_sidebar_state="expanded" # 모바일에서도 사이드바를 펼친 채 시작
+)
+
+st.title("📈 해외주식 증여세 신고용 평균시세 계산기")
 
 # --- 사이드바 ---
 st.sidebar.header("입력 정보")
