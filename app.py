@@ -87,7 +87,8 @@ if st.sidebar.button("계산하기"):
             'tax': tax,
             'gift_date': gift_date,
             'start_date': start_str,
-            'end_date': end_str
+            'end_date': end_str,
+            'rel_nm': relationship
         }
         st.rerun() # 계산 후 즉시 화면 갱신
 
@@ -100,24 +101,22 @@ if st.session_state.all_results:
     is_incomplete_any = any(r.get('is_incomplete', False) for r in res_list)
     if is_incomplete_any:
         report_date = res_list[0].get('reportable_date')
-        st.warning(f"⚠️ **주의: 아직 평가기간이 종료되지 않았습니다.** (확정일: {report_date})")
+        st.warning(f"⚠️ **주의: 아직 증여 신고를 위한 평가기간이 종료되지 않았습니다.** (확정일: {report_date})")
 
     # 상단 요약 지표
     st.header("💰 전체 증여세 통합 산출 결과")
     c1, c2, c3 = st.columns(3)
     c1.metric("총 합계 가액", f"{summary.get('total_amt', 0):,.0f} 원")
-    c2.metric("공제 금액", f"{summary.get('deduction', 0):,.0f} 원")
+    c2.metric(f"{summary.get('rel_nm', 0)} 증여 공제 금액", f"{summary.get('deduction', 0):,.0f} 원")
     c3.metric("예상 납부세액", f"{summary.get('tax', 0):,.0f} 원")
 
-    # 종목별 상세 탭
-    st.divider()
-    tabs = st.tabs([f"📊 {r['ticker']}" for r in res_list])
-    for i, tab in enumerate(tabs):
-        with tab:
-            r = res_list[i]
-            st.write(f"**{r['ticker']}** - {r['count']}주")
-            st.metric("1주당 평균 가액", f"{r['avg_val']:,.2f} 원")
-            st.line_chart(r['df']['KRW_Value'])
+    # 데이터 출처 안내
+    with st.expander("ℹ️ 데이터 출처 및 산출 기준 안내"):
+        st.markdown("""
+        * **주가/환율 정보**: Yahoo Finance
+        * **산출 방식**: 상증세법 제63조에 의거 수증일 전후 각 2개월(총 4개월) 종가 평균액 계산
+        * **휴장일 처리**: 주가와 환율 데이터가 모두 존재하는 날의 가액만 산술평균에 포함
+        """)
 
     # 엑셀 다운로드 섹션
     st.divider()
@@ -138,11 +137,20 @@ if st.session_state.all_results:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # 데이터 출처 안내
+    st.link_button(
+    "➡️ 국세청 증여세 신고 페이지 바로가기",
+    "https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&tmIdx=41&tm2lIdx=4107000000&tm3lIdx=4107010000",
+    type="secondary" # 강조하고 싶으면 primary, 아니면 secondary
+    )
+
+    # 종목별 상세 탭
     st.divider()
-    with st.expander("ℹ️ 데이터 출처 및 산출 기준 안내"):
-        st.markdown("""
-        * **주가/환율 정보**: Yahoo Finance
-        * **산출 방식**: 상증세법 제63조에 의거 수증일 전후 각 2개월(총 4개월) 종가 평균액 계산
-        * **휴장일 처리**: 주가와 환율 데이터가 모두 존재하는 날의 가액만 산술평균에 포함
-        """)
+    st.subheader("🎢 참고 : 종목별 시세 차트")
+    tabs = st.tabs([f"📊 {r['ticker']}" for r in res_list])
+    for i, tab in enumerate(tabs):
+        with tab:
+            r = res_list[i]
+            st.write(f"**{r['ticker']}** - {r['count']}주")
+            st.metric("1주당 평균 가액", f"{r['avg_val']:,.2f} 원")
+            st.line_chart(r['df']['KRW_Value'])
+
