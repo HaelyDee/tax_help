@@ -31,14 +31,8 @@ def get_stock_and_fx_data(ticker, gift_date):
         'FX_Rate': fx_data.iloc[:, 0] if isinstance(fx_data, pd.DataFrame) else fx_data
     })
     
-    # 4. 휴장일 처리 (Forward Fill)
-    # 실제 평가 기준은 '해당 기간 내 공표된 가격의 평균'입니다.
-    # 거래가 없는 날(주말/공휴일)은 직전 거래일의 가격을 따르는 것이 실무적입니다.
-    all_days = pd.date_range(start=start_date, end=end_date)
-    df = df.reindex(all_days).ffill()
-    
-    # 만약 시작일 자체가 휴장일이라 ffill할 데이터가 없다면(NaN), bfill로 메꿔줍니다.
-    df = df.bfill()
+    # 결측치가 있는 행(주로 환율/주가 한쪽만 있는 날)을 제거
+    df = df.dropna()
     
     df['KRW_Value'] = df['Stock_Price'] * df['FX_Rate']
     
