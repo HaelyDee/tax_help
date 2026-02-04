@@ -5,7 +5,7 @@ from datetime import timedelta, datetime, date
 
 def load_relation_data():
     """가족관계 공제 데이터 로드"""
-    return pd.read_csv('relation_data.csv', encoding='cp949')
+    return pd.read_csv('relation_data.csv', encoding='utf-8')
 
 def get_stock_and_fx_data(ticker, gift_date):
     """주가 및 환율 데이터 수집 및 전처리"""
