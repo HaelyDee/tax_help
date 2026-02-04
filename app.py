@@ -18,6 +18,18 @@ st.set_page_config(
     initial_sidebar_state="expanded" # 모바일에서도 사이드바를 펼친 채 시작
 )
 
+if not st.session_state.all_results:
+    st.markdown("""
+        <div style="text-align: center; padding: 50px;">
+            <h2 style="color: #FF4B4B;">⬅️ 왼쪽 메뉴를 열어주세요!</h2>
+            <p style="font-size: 1.2rem;">
+                화면 왼쪽 상단의 <b>'>'</b> 모양 화살표를 누르시면<br>
+                종목과 수량을 입력할 수 있는 메뉴가 나타납니다.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.info("데이터 분석 기간: 수증일 전후 2개월 (총 4개월)")
+
 st.title("📈 해외주식 증여세 신고용 평균시세 계산기")
 
 # --- 사이드바 ---
